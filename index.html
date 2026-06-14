@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Smart Elevator</title>
+
+<style>
+body {
+  font-family: 'Segoe UI';
+  background: linear-gradient(135deg,#0f2027,#203a43,#2c5364);
+  color:white;
+  text-align:center;
+}
+
+h1 {
+  font-size: 36px;
+  margin-top:20px;
+}
+
+.card {
+  margin:20px auto;
+  padding:25px;
+  width:420px;
+  border-radius:18px;
+  background: rgba(255,255,255,0.06);
+  box-shadow: 0 0 30px rgba(0,255,200,0.25);
+}
+
+.status {
+  font-size: 24px;
+  font-weight: bold;
+  margin-bottom:10px;
+}
+
+.value {
+  font-size: 18px;
+  margin:6px;
+}
+
+canvas {
+  background:black;
+  border-radius:12px;
+}
+</style>
+
+</head>
+
+<body>
+
+<h1>SMART ELEVATOR</h1>
+<h3>Team 18</h3>
+
+<div class="card">
+<div class="status" id="status">Lift Diam</div>
+<div class="value" id="massa"></div>
+<div class="value" id="percepatan"></div>
+<div class="value" id="berat"></div>
+</div>
+
+<div class="card">
+<canvas id="graph" width="400" height="220"></canvas>
+</div>
+
+<script>
+let canvas = document.getElementById("graph");
+let ctx = canvas.getContext("2d");
+
+let data = [];
+let smoothAcc = 0;
+
+function smooth(val){
+  smoothAcc = smoothAcc * 0.8 + val * 0.2;
+  return smoothAcc;
+}
+
+function draw(){
+  // CLEAR CANVAS
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // background ulang biar tetap hitam
+  ctx.fillStyle = "black";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // Label sumbu
+  ctx.fillStyle = "white";
+  ctx.font = "12px Segoe UI";
+
+  ctx.fillText("Percepatan (m/s^2)", 5, 15);
+  ctx.fillText("Waktu (s)", 320, 210);
+
+  // garis tengah
+  ctx.strokeStyle="white";
+  ctx.beginPath();
+  ctx.moveTo(0,110);
+  ctx.lineTo(400,110);
+  ctx.stroke();
+
+  ctx.strokeStyle="#00ffcc";
+  ctx.beginPath();
+
+  for(let i=0;i<data.length;i++){
+    let x = i * 10;
+    let y = 110 - data[i]*20; // 🔥 ubah dari 35 jadi 20 biar stabil
+
+    if(i==0) ctx.moveTo(x,y);
+    else ctx.lineTo(x,y);
+  }
+
+  ctx.stroke();
+}
+
+function update(){
+  fetch('/data')
+  .then(res=>res.json())
+  .then(d=>{
+
+    let acc = smooth(d.percepatan);
+
+    document.getElementById("massa").innerText =
+      "Massa: " + d.massa.toFixed(2) + " kg";
+
+    document.getElementById("percepatan").innerText =
+      "Percepatan Gaya Berat: " + acc.toFixed(2) + " m/s^2";
+
+    document.getElementById("berat").innerText =
+      "Gaya Berat: " + d.berat.toFixed(2) + " N";
+
+    if(acc > 0.02)
+      document.getElementById("status").innerText = "Lift Naik";
+    else if(acc < -0.02)
+      document.getElementById("status").innerText = "Lift Turun";
+    else
+      document.getElementById("status").innerText = "Lift Diam";
+
+    data.push(acc);
+
+    if(data.length > 40){
+      data.shift();
+    }
+
+    draw();
+  });
+}
+
+// update cepat (fix delay)
+setInterval(update,200);
+</script>
+
+</body>
+</html>
